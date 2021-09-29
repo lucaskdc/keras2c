@@ -8,6 +8,7 @@ https://github.com/f0uriest/keras2c
 
 #pragma once
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "k2c_tensor_include.h"
 
@@ -65,8 +66,11 @@ void k2c_upsampling2d(k2c_tensor* output, const k2c_tensor* input, const size_t 
 void k2c_upsampling3d(k2c_tensor* output, const k2c_tensor* input, const size_t * size);
 
 // Core Layers
+void k2c_dense_1d(k2c_tensor* output, const k2c_tensor* input, const k2c_tensor* kernel,
+               const k2c_tensor* bias, k2c_activationType *activation); //fwork not necessary
 void k2c_dense(k2c_tensor* output, const k2c_tensor* input, const k2c_tensor* kernel,
                const k2c_tensor* bias, k2c_activationType *activation, float * fwork);
+void k2c_flatten_inplace(k2c_tensor *array); //Array is the input and output -- loss of original input
 void k2c_flatten(k2c_tensor *output, const k2c_tensor* input);
 void k2c_reshape(k2c_tensor *output, const k2c_tensor* input, const size_t * newshp,
                  const size_t newndim);
@@ -82,13 +86,21 @@ void k2c_matmul(float * C, const float * A, const float * B, const size_t outrow
                 const size_t outcols, const size_t innerdim);
 void k2c_affine_matmul(float * C, const float * A, const float * B, const float * d,
                        const size_t outrows,const size_t outcols, const size_t innerdim);
+void k2c_matmul_low_memory_B_iter(float * C, const float * A, const float * B,
+                    const size_t outrows, const size_t outcols, const size_t innerdim,
+                    const size_t row_from, const size_t row_to,
+                    //const size_t column_from, const size_t column_to,
+                    const size_t innerdim_from, const size_t innerdim_to);
 size_t k2c_sub2idx(const size_t * sub, const size_t * shape, const size_t ndim);
 void k2c_idx2sub(const size_t idx, size_t * sub, const size_t * shape, const size_t ndim);
 void k2c_dot(k2c_tensor* C, const k2c_tensor* A, const k2c_tensor* B, const size_t * axesA,
              const size_t * axesB, const size_t naxes, const int normalize, float * fwork);
 void k2c_bias_add(k2c_tensor* A, const k2c_tensor* b);
 void k2c_flip(k2c_tensor *A, const size_t axis);
+float* k2c_read_binary_float32_array_file(const char* filename, const size_t array_size);
+float* k2c_read_binary_float32_array_file_offset_limit(const char* filename, const size_t array_size, const size_t offset);
 float* k2c_read_array(const char* filename, const size_t array_size);
+float* k2c_load_binary(float *ptr, FILE *fptr, size_t *elements_read, const size_t n_elem_to_read, const size_t array_size);
 
 // Merge layers
 void k2c_add(k2c_tensor* output, const size_t num_tensors,...);

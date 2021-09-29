@@ -29,10 +29,11 @@ keras2c can be used from the command line:
       function_name      What to name the resulting C function
      
     optional arguments:
-      -h, --help         show this help message and exit
-      -m, --malloc       Use dynamic memory for large arrays. Weights will be
-                         saved to .csv files that will be loaded at runtime
-      -t , --num_tests   Number of tests to generate. Default is 10
+      -h, --help            show this help message and exit
+      -m, --malloc          Use dynamic memory for large arrays. Weights will be
+                            saved to .csv or binary files that will be loaded at runtime
+      -t , --num_tests      Number of tests to generate. Default is 10
+      -w , --weight_format  Set weight file format output when malloc is true ['csv','binary']
 
 
 It can also be used with a python environment in the following manner:
@@ -40,7 +41,7 @@ It can also be used with a python environment in the following manner:
 .. code-block:: python
 
     from keras2c import k2c
-    k2c(model, function_name, malloc=False, num_tests=10, verbose=True)
+    k2c(model, function_name, malloc=False, num_tests=10, verbose=True, weight_format='csv')
 
 For more information, see `Installation <https://f0uriest.github.io/keras2c/installation.html>`_ and  `Usage <https://f0uriest.github.io/keras2c/usage.html>`_
 

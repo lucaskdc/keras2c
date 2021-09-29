@@ -28,7 +28,7 @@ __maintainer__ = "Rory Conlin, https://github.com/f0uriest/keras2c"
 __email__ = "wconlin@princeton.edu"
 
 
-def model2c(model, function_name, malloc=False, verbose=True):
+def model2c(model, function_name, malloc=False, verbose=True, weight_file='csv'):
     """Generates C code for model
 
     Writes main function definition to "function_name.c" and a public header 
@@ -46,7 +46,7 @@ def model2c(model, function_name, malloc=False, verbose=True):
     """
 
     model_inputs, model_outputs = get_model_io_names(model)
-    includes = '#include <math.h> \n '
+    includes =  '#include <math.h> \n '
     includes += '#include <string.h> \n'
     includes += '#include "./include/k2c_include.h" \n'
     includes += '#include "./include/k2c_tensor_include.h" \n'
@@ -69,7 +69,7 @@ def model2c(model, function_name, malloc=False, verbose=True):
                                               key for key in malloc_vars.keys()])
     function_signature += ')'
 
-    init_sig, init_fun = gen_function_initialize(function_name, malloc_vars)
+    init_sig, init_fun = gen_function_initialize(function_name, malloc_vars, weight_file_format='binary')
     term_sig, term_fun = gen_function_terminate(function_name, malloc_vars)
     reset_sig, reset_fun = gen_function_reset(function_name)
 
@@ -126,7 +126,7 @@ def gen_function_reset(function_name):
     return reset_sig, reset_fun
 
 
-def gen_function_initialize(function_name, malloc_vars):
+def gen_function_initialize(function_name, malloc_vars, weight_file_format='csv'):
     """Writes an initialize function
 
     Initialize function is used to load variables into memory and do other start up tasks
@@ -148,9 +148,25 @@ def gen_function_initialize(function_name, malloc_vars):
     init_fun = init_sig
     init_fun += ' { \n\n'
     for key in malloc_vars.keys():
-        fname = function_name + key + ".csv"
-        np.savetxt(fname, malloc_vars[key], fmt="%.8e", delimiter=',')
-        init_fun += '*' + key + " = k2c_read_array(\"" + \
+        fname = function_name + key
+
+        load_func = ''
+
+        if weight_file_format == 'csv':
+            fname = function_name + key + '.csv'
+            load_func = 'k2c_read_array'
+            np.savetxt(fname, malloc_vars[key], fmt="%.8e", delimiter=',')
+        elif weight_file_format == 'binary':
+            fname = function_name + key + '.bin_weight'
+            load_func = 'k2c_read_binary_float32_array_file'
+            with open(fname, 'wb') as bin_file:
+                bin_file.write(malloc_vars[key].tobytes())
+                bin_file.close()
+        else:
+            fname     = 'unknown_file'
+            load_func = 'unknown_format'
+            
+        init_fun += '*' + key + " = "+load_func+"(\"" + \
             fname + "\"," + str(malloc_vars[key].size) + "); \n"
     init_fun += "} \n\n"
 
@@ -185,7 +201,7 @@ def gen_function_terminate(function_name, malloc_vars):
     return term_sig, term_fun
 
 
-def k2c(model, function_name, malloc=False, num_tests=10, verbose=True):
+def k2c(model, function_name, malloc=False, num_tests=10, verbose=True, weight_file_format='csv'):
     """Converts keras model to C code and generates test suite
 
     Args:

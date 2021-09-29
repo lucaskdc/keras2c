@@ -94,10 +94,10 @@ class Weights2C():
     def _write_weights_array2c(self, array, name):
         temp = self.array2c(array, name, self.malloc)
         if self.malloc:
-            self.stack_vars += temp[0]
-            self.malloc_vars.update(temp[1])
+            self.stack_vars += temp[0]          #str => tensor declaration
+            self.malloc_vars.update(temp[1])    #dict => weights
         else:
-            self.stack_vars += temp
+            self.stack_vars += temp             #str => tensor declaration + initialization
 
     def _write_weights_layer(self, layer):
         method = getattr(self, '_write_weights_' + layer_type(layer))

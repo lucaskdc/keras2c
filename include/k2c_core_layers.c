@@ -12,6 +12,27 @@ https://github.com/f0uriest/keras2c
 #include "k2c_include.h"
 
 /**
+ * Dense (fully connected) 1d Layer.
+ *
+ * :param output: output tensor.
+ * :param input: input tensor.
+ * :param kernel: kernel tensor.
+ * :param bias: bias tensor.
+ * :param activation: activation function to apply to output.
+ */
+void k2c_dense_1d(k2c_tensor* output, const k2c_tensor* input, const k2c_tensor* kernel,
+               const k2c_tensor* bias, k2c_activationType *activation){
+    //fwork not necessary to perform 1d
+
+    const size_t outcols = kernel->shape[1];
+    const size_t innerdim = kernel->shape[0];
+    const size_t outsize = 1*outcols;
+    k2c_affine_matmul(output->array,input->array,kernel->array,bias->array,
+                        1,outcols,innerdim);
+    activation(output->array,outsize);
+}
+
+/**
  * Dense (fully connected) Layer.
  *
  * :param output: output tensor.
@@ -52,6 +73,19 @@ void k2c_dense(k2c_tensor* output, const k2c_tensor* input, const k2c_tensor* ke
     }
 }
 
+/**
+ * Flatten Layer Inplace.
+ * flattens inputs to ndim=1 with loss of original input
+ *
+ * :param array: input and output tensor.
+ */
+void k2c_flatten_inplace(k2c_tensor *array) {
+    for (size_t i=0; i<array->ndim; ++i) {
+        array->shape[i] = 1;
+    }
+    array->shape[0] = array->numel;
+    array->ndim = 1;
+}
 
 /**
  * Flatten Layer.
@@ -59,7 +93,6 @@ void k2c_dense(k2c_tensor* output, const k2c_tensor* input, const k2c_tensor* ke
  *
  * :param output: output tensor.
  * :param input: input tensor.
- * :param kernel: kernel tensor.
  */
 void k2c_flatten(k2c_tensor *output, const k2c_tensor* input) {
 

@@ -12,6 +12,7 @@ https://github.com/f0uriest/keras2c
 #include <string.h>
 #include "k2c_include.h"
 
+const size_t chunk_size = 512;
 
 /**
  * Just your basic 1d matrix multipication.
@@ -44,6 +45,37 @@ void k2c_matmul(float * C, const float * A, const float * B, const size_t outrow
 
 
 /**
+ * Matrix multiplication.
+ * computes C = A*B after iteracting all innerdim 
+ * assumes A and C are all 1d arrays of matrices stored in row major order
+ * assumes B is a 1d slice array of a matrix indexed from innerdim_from*ncols
+ * B[0] must be a reference to B(row,column) = B(innerdim_from,0).
+ * 
+ * :param C: output array.
+ * :param A: input array 1.
+ * :param B: input array 2.
+ * :param outrows: number of rows of C and A.
+ * :param outcols: number of cols of C, B and d.
+ * :param innderdim: number of cols of A and rows of B
+ */
+void k2c_matmul_low_memory_B_iter(float * C, const float * A, const float * B,
+                    const size_t outrows, const size_t outcols, const size_t innerdim,
+                    const size_t row_from, const size_t row_to,
+                    //const size_t column_from, const size_t column_to,
+                    const size_t innerdim_from, const size_t innerdim_to) {
+
+    for (size_t i = row_from ; i < row_to; ++i) {     //i = row of A and C
+        const size_t outrowidx = i*outcols;         //index row of C
+        const size_t inneridx = i*innerdim;         //index row of A
+        for (size_t j = 0;  j < outcols; ++j) {     //j = column of B, C and d
+            for (size_t k = innerdim_from; k < innerdim_to; ++k) {                  //k = col of A and row of B
+                C[outrowidx+j] += A[inneridx+k] * B[(k-innerdim_from)*outcols+j];   //k = innerdim ... A(outrow,k).B(k,outcol)
+            }
+        }
+    }
+}
+
+/**
  * Affine matrix multiplication.
  * computes C = A*B + d, where d is a vector that is added to each
  row of A*B
@@ -63,12 +95,12 @@ void k2c_affine_matmul(float * C, const float * A, const float * B, const float 
     // make sure output is empty
     memset(C, 0, outrows*outcols*sizeof(C[0]));
 
-    for (size_t i = 0 ; i < outrows; ++i) {
-        const size_t outrowidx = i*outcols;
-        const size_t inneridx = i*innerdim;
-        for (size_t j = 0;  j < outcols; ++j) {
-            for (size_t k = 0; k < innerdim; ++k) {
-                C[outrowidx+j] += A[inneridx+k] * B[k*outcols+j];
+    for (size_t i = 0 ; i < outrows; ++i) {     //i = row
+        const size_t outrowidx = i*outcols;     //index row
+        const size_t inneridx = i*innerdim;     //index row offset
+        for (size_t j = 0;  j < outcols; ++j) { //j = column
+            for (size_t k = 0; k < innerdim; ++k) { //k = innerdim (element of row(k) . column(k) calculation)
+                C[outrowidx+j] += A[inneridx+k] * B[k*outcols+j]; //k = innerdim ... A(outrow,k).B(k,outcol)
             }
             C[outrowidx+j] += d[j];
         }
@@ -343,4 +375,46 @@ float* k2c_read_array(const char* filename, const size_t array_size) {
     }
     fclose(finp);
     return ptr;
+}
+
+float* k2c_read_binary_float32_array_file(const char* filename, const size_t array_size){
+    float* ptr = (float*)malloc(array_size * sizeof(float));
+    size_t elements_read = 0;
+    FILE *finp;
+    int foo;
+    finp = fopen(filename, "rb");
+    if(NULL == finp){
+        printf("Unable to open file %s \n", filename);
+        exit(-1);
+    }
+
+    k2c_load_binary(ptr, finp, &elements_read, array_size, array_size);
+
+    fclose(finp);
+    return ptr;
+}
+
+float* k2c_read_binary_float32_array_file_offset_limit(const char* filename, const size_t array_size, const size_t offset){
+    float* ptr = (float*)malloc(array_size * sizeof(float));
+    size_t elements_read = 0;
+    FILE *finp;
+    int foo;
+    finp = fopen(filename, "rb");
+    if(NULL == finp){
+        printf("Unable to open file %s \n", filename);
+        exit(-1);
+    }
+
+    fseek(finp, offset*sizeof(float), SEEK_SET);
+    k2c_load_binary(ptr, finp, &elements_read, array_size, array_size);
+
+    fclose(finp);
+    return ptr;
+}
+
+float* k2c_load_binary(float *ptr, FILE *fptr, size_t *elements_read, const size_t n_elem_to_read, const size_t array_size){
+
+    while (!(feof(fptr)) && (*elements_read < array_size)){
+        *elements_read += fread(ptr, sizeof(float), n_elem_to_read-*elements_read, fptr);     
+    }
 }
