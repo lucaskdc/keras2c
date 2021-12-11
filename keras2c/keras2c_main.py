@@ -28,7 +28,7 @@ __maintainer__ = "Rory Conlin, https://github.com/f0uriest/keras2c"
 __email__ = "wconlin@princeton.edu"
 
 
-def model2c(model, function_name, malloc=False, verbose=True, weight_file='csv'):
+def model2c(model, function_name, malloc=False, verbose=True, weight_file_format='csv'):
     """Generates C code for model
 
     Writes main function definition to "function_name.c" and a public header 
@@ -69,7 +69,7 @@ def model2c(model, function_name, malloc=False, verbose=True, weight_file='csv')
                                               key for key in malloc_vars.keys()])
     function_signature += ')'
 
-    init_sig, init_fun = gen_function_initialize(function_name, malloc_vars, weight_file_format='binary')
+    init_sig, init_fun = gen_function_initialize(function_name, malloc_vars, weight_file_format)
     term_sig, term_fun = gen_function_terminate(function_name, malloc_vars)
     reset_sig, reset_fun = gen_function_reset(function_name)
 
@@ -234,7 +234,7 @@ def k2c(model, function_name, malloc=False, num_tests=10, verbose=True, weight_f
         print('All checks passed')
 
     malloc_vars, stateful = model2c(
-        model, function_name, malloc, verbose)
+        model, function_name, malloc, verbose, weight_file_format=weight_file_format)
 
     s = 'Done \n'
     s += "C code is in '" + function_name + \
@@ -244,7 +244,7 @@ def k2c(model, function_name, malloc=False, num_tests=10, verbose=True, weight_f
                         num_tests, stateful, verbose)
         s += "Tests are in '" + function_name + "_test_suite.c' \n"
     if malloc:
-        s += "Weight arrays are in .csv files of the form 'model_name_layer_name_array_type.csv' \n"
+        s = s + "Weight arrays are in "+weight_file_format+" files of the form 'model_name_layer_name_array_type.extension' \n"
         s += "They should be placed in the directory from which the main program is run."
     if verbose:
         print(s)
